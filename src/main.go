@@ -14,18 +14,20 @@ import (
 )
 
 type ITScopeCommunicator struct {
-	username  string
-	password  string
-	userAgent string
-	language  Language
-	client    *http.Client
+	username    string
+	password    string
+	userAgent   string
+	language    Language
+	client      *http.Client
+	CompanyName string
 }
 
-func New(userName string, password string, language Language) *ITScopeCommunicator {
+func New(companyName string, userName string, password string, language Language) *ITScopeCommunicator {
 	its := new(ITScopeCommunicator)
+	its.CompanyName = companyName
+	its.userAgent = its.CompanyName + "-ITS_ApiModule-0.1"
 	its.username = userName
 	its.password = password
-	its.userAgent = "MeineFirma-MeineAnwendung-4.0927"
 	its.language = language
 	its.client = &http.Client{}
 
