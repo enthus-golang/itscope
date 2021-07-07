@@ -32,7 +32,7 @@ func New(userName string, password string, language Language) *ITScopeCommunicat
 	return its
 }
 
-func (its *ITScopeCommunicator) SetLanguage(language string) {
+func (its *ITScopeCommunicator) SetLanguage(language Language) {
 	its.language = language
 }
 
@@ -44,7 +44,7 @@ func (its *ITScopeCommunicator) authenticateRequest(request *http.Request) error
 	request.SetBasicAuth(its.username, its.password)
 	request.Header.Add("Accept", "application/json")
 	request.Header.Add("UserAgent", its.userAgent)
-	request.Header.Add("Accept-Language", its.language)
+	request.Header.Add("Accept-Language", string(its.language))
 
 	return nil
 }
