@@ -7,6 +7,13 @@ type ProductTypesContainer struct {
 	ProductTypes []ProductType `json:"productType"`
 }
 
+type Language string
+
+const (
+	German  Language = "de"
+	English Language = "en"
+)
+
 type ProductType struct {
 	ID                 string           `json:"id"`
 	ProductTypeGroup   ProductTypeGroup `json:"productTypeGroup"`

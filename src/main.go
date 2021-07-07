@@ -17,11 +17,11 @@ type ITScopeCommunicator struct {
 	username  string
 	password  string
 	userAgent string
-	language  string
+	language  Language
 	client    *http.Client
 }
 
-func New(userName string, password string, language string) *ITScopeCommunicator {
+func New(userName string, password string, language Language) *ITScopeCommunicator {
 	its := new(ITScopeCommunicator)
 	its.username = userName
 	its.password = password
