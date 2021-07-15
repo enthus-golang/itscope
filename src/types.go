@@ -1,4 +1,4 @@
-package itscope
+package main
 
 import "sync"
 
