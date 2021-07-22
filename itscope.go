@@ -51,33 +51,12 @@ func (its *ITScopeCommunicator) authenticateRequest(request *http.Request) error
 	return nil
 }
 
-func (its *ITScopeCommunicator) GetProductData(ctx context.Context, productIdOrSKU string) (*Product, error) {
-	requestUrl := "https://api.itscope.com/2.0/products/datasheet/id/" + productIdOrSKU + "/standard.json"
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, requestUrl, nil)
+func (its *ITScopeCommunicator) GetProductData(ctx context.Context, productSKU string) (*Product, error) {
+	productContainer, err := its.GetProductsFromQuery(ctx, "dispid="+productSKU)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not retrieve product data")
 	}
-	err = its.authenticateRequest(request)
-	if err != nil {
-		return nil, err
-	}
-
-	response, err := its.client.Do(request)
-	if err != nil {
-		return nil, err
-	}
-
-	if response.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf(response.Status)
-	}
-
-	var products ProductsContainer
-	err = json.NewDecoder(response.Body).Decode(&products)
-	if err != nil {
-		return &products.Product[0], err
-	}
-
-	return &products.Product[0], nil
+	return &productContainer.Product[0], err
 }
 
 func (its *ITScopeCommunicator) GetAllProductTypes(ctx context.Context) ([]ProductType, error) {
