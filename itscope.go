@@ -113,7 +113,7 @@ func (its *ITScopeCommunicator) GetAllProductTypes(ctx context.Context) ([]Produ
 	return productTypes.ProductTypes, nil
 }
 
-func (its *ITScopeCommunicator) GetProductAccessories(ctx context.Context, products []string) ([]Product, error) {
+func (its *ITScopeCommunicator) GetProductAccessoriesFromList(ctx context.Context, products []string) ([]Product, error) {
 	if len(products) == 0 {
 		return nil, fmt.Errorf("accessoryList is empty")
 	}
@@ -274,16 +274,25 @@ func (its *ITScopeCommunicator) GetServiceTypeAccessoriesOfProduct(product *Prod
 		logrus.Error("Could not Get Product Info")
 	}
 
-	accessoryIds := make([]string, len(product.Accessories))
-	for i, v := range product.Accessories {
-		accessoryIds[i] = v.ReferencedProductID
-	}
-
-	accessories, err := its.GetProductAccessories(context.Background(), accessoryIds)
+	accessories, err := its.GetProductAccessories(context.Background(), product)
 	if err != nil {
 		return nil, err
 	}
 
 	serviceTypes := its.FilterProductTypesByGroupId("SSP", productTypes)
 	return its.FilterProductsByTypeList(accessories, serviceTypes), nil
+}
+
+func (its *ITScopeCommunicator) GetProductAccessories(ctx context.Context, product *Product) ([]Product, error) {
+	accessoryIds := make([]string, len(product.Accessories))
+	for i, v := range product.Accessories {
+		accessoryIds[i] = v.ReferencedProductID
+	}
+
+	accessories, err := its.GetProductAccessoriesFromList(ctx, accessoryIds)
+	if err != nil {
+		return nil, err
+	}
+
+	return accessories, nil
 }
