@@ -7,9 +7,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"sync"
-
-	"golang.org/x/sync/errgroup"
 )
 
 type ITScopeCommunicator struct {
@@ -104,35 +101,21 @@ func (its *ITScopeCommunicator) GetProductAccessoriesFromList(ctx context.Contex
 	}
 
 	productList := make([]Product, 0)
-	var requestedProductsLock sync.Mutex
 
-	semaphoreChan := make(chan struct{}, 20)
-	defer close(semaphoreChan)
-
-	wg, gCtx := errgroup.WithContext(ctx)
 	queryStrings := its.createQueryStrings(products, 50)
 	for _, query := range queryStrings {
 		query := query
-		semaphoreChan <- struct{}{}
-		wg.Go(func() error {
-			defer func() {
-				<-semaphoreChan
-			}()
-			product, err := its.GetProductsFromQuery(gCtx, query)
-			if err != nil {
-				return err
-			}
-			requestedProductsLock.Lock()
 
-			defer requestedProductsLock.Unlock()
+		product, err := its.GetProductsFromQuery(ctx, query)
+		if err != nil {
+			return nil, err
+		}
 
-			productList = append(productList, product.Product...)
+		productList = append(productList, product.Product...)
 
-			return nil
-		})
 	}
 
-	return productList, wg.Wait()
+	return productList, nil
 }
 
 func (its *ITScopeCommunicator) GetProductsFromQuery(ctx context.Context, query string) (*ProductsContainer, error) {
