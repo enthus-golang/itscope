@@ -100,7 +100,7 @@ func (its *ITScopeCommunicator) GetAllProductTypes(ctx context.Context) ([]Produ
 
 func (its *ITScopeCommunicator) GetProductAccessoriesFromList(ctx context.Context, products []string) ([]Product, error) {
 	if len(products) == 0 {
-		return nil, fmt.Errorf("accessoryList is empty")
+		return nil, nil
 	}
 
 	productList := make([]Product, 0)
