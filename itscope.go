@@ -55,7 +55,12 @@ func (its *ITScopeCommunicator) GetProductData(ctx context.Context, productSKU s
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve product data: %w", err)
 	}
-	return &productContainer.Product[0], err
+
+	if len(productContainer.Product) > 0 {
+		return &productContainer.Product[0], nil
+	} else {
+		return nil, nil
+	}
 }
 
 func (its *ITScopeCommunicator) GetAllProductTypes(ctx context.Context) ([]ProductType, error) {
