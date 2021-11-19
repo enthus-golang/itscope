@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"golang.org/x/time/rate"
 )
 
 type ITScopeCommunicator struct {
@@ -103,9 +105,17 @@ func (its *ITScopeCommunicator) GetProductAccessoriesFromList(ctx context.Contex
 	productList := make([]Product, 0)
 
 	queryStrings := its.createQueryStrings(products, 50)
+
+	// Allow a maximum of 5 requests per second so ITscope doesn't block us.
+	const limit = rate.Limit(5)
+	const limiter = rate.NewLimiter(limit, 3)
+
 	for _, query := range queryStrings {
 		query := query
 
+		if err := limiter.Wait(ctx); err != nil {
+			return nil, fmt.Errorf("limiter timeout")
+		}
 		product, err := its.GetProductsFromQuery(ctx, query)
 		if err != nil {
 			return nil, err
