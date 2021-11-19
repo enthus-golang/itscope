@@ -147,7 +147,9 @@ func (its *ITScopeCommunicator) GetProductsFromQuery(ctx context.Context, query 
 	}
 	defer response.Body.Close()
 
-	if response.StatusCode != http.StatusOK {
+	if response.StatusCode == http.StatusNotFound {
+		return &ProductsContainer{}, nil
+	} else if response.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf(response.Status)
 	}
 	var products ProductsContainer
