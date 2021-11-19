@@ -9,7 +9,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -76,9 +75,9 @@ func (its *ITScopeCommunicator) GetAllProductTypes(ctx context.Context) ([]Produ
 
 	response, err := its.client.Do(request)
 	if err != nil {
-		logrus.Debugln("error when sending request")
 		return nil, err
 	}
+	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf(response.Status)
@@ -139,10 +138,12 @@ func (its *ITScopeCommunicator) GetProductsFromQuery(ctx context.Context, query 
 	if err != nil {
 		return nil, err
 	}
+
 	response, err := its.client.Do(request)
 	if err != nil {
 		return nil, fmt.Errorf("product query: %w", err)
 	}
+	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf(response.Status)
@@ -247,13 +248,13 @@ func (its *ITScopeCommunicator) FilterProductsByTypeList(products []Product, typ
 	return filteredProductsArray
 }
 
-func (its *ITScopeCommunicator) GetServiceTypeAccessoriesOfProduct(product *Product) ([]Product, error) {
-	productTypes, err := its.GetAllProductTypes(context.Background())
+func (its *ITScopeCommunicator) GetServiceTypeAccessoriesOfProduct(ctx context.Context, product *Product) ([]Product, error) {
+	productTypes, err := its.GetAllProductTypes(ctx)
 	if err != nil {
-		logrus.Error("Could not Get Product Info")
+		return nil, err
 	}
 
-	accessories, err := its.GetProductAccessories(context.Background(), product)
+	accessories, err := its.GetProductAccessories(ctx, product)
 	if err != nil {
 		return nil, err
 	}
