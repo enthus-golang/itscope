@@ -79,7 +79,9 @@ func (its *ITScopeCommunicator) GetAllProductTypes(ctx context.Context) ([]Produ
 	}
 	defer response.Body.Close()
 
-	if response.StatusCode != http.StatusOK {
+	if response.StatusCode == http.StatusNotFound {
+		return []ProductType{}, nil
+	} else if response.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf(response.Status)
 	}
 	var productTypes ProductTypesContainer
