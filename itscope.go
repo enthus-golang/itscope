@@ -54,7 +54,7 @@ func (its *ITScopeCommunicator) authenticateRequest(request *http.Request) error
 func (its *ITScopeCommunicator) GetProductData(ctx context.Context, productSKU string) (*Product, error) {
 	productContainer, err := its.GetProductsFromQuery(ctx, "distpid="+productSKU)
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve product data")
+		return nil, fmt.Errorf("could not retrieve product data: %w", err)
 	}
 	return &productContainer.Product[0], err
 }
