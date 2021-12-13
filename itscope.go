@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
@@ -84,6 +85,7 @@ func (its *ITScopeCommunicator) GetAllProductTypes(ctx context.Context) ([]Produ
 		response, err = its.client.Do(request)
 		if err != nil {
 			logrus.Errorln("Error during GetAllProductTypes, retrying...")
+			time.Sleep(2 * time.Second)
 			retries -= 1
 		} else {
 			break
@@ -156,6 +158,7 @@ func (its *ITScopeCommunicator) GetProductsFromQuery(ctx context.Context, query 
 		response, err = its.client.Do(request)
 		if err != nil {
 			logrus.Errorln("Error during GetProductsFromQuery, retrying...")
+			time.Sleep(2 * time.Second)
 			retries -= 1
 		} else {
 			break
