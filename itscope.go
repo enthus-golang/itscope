@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
 )
 
@@ -70,28 +71,38 @@ func (its *ITScopeCommunicator) GetAllProductTypes(ctx context.Context) ([]Produ
 	}
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not retrieve product types: %w", err)
 	}
 	err = its.authenticateRequest(request)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not retrieve product types: %w", err)
 	}
 
-	response, err := its.client.Do(request)
+	retries := 3
+	var response *http.Response
+	for retries > 0 {
+		response, err = its.client.Do(request)
+		if err != nil {
+			logrus.Errorln("Error during GetAllProductTypes, retrying...")
+			retries -= 1
+		} else {
+			break
+		}
+	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not retrieve product types: %w", err)
 	}
 	defer response.Body.Close()
 
 	if response.StatusCode == http.StatusNotFound {
 		return []ProductType{}, nil
 	} else if response.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf(response.Status)
+		return nil, fmt.Errorf("GetAllProductTypes: %s", response.Status)
 	}
 	var productTypes ProductTypesContainer
 	err = json.NewDecoder(response.Body).Decode(&productTypes)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not retrieve product types: %w", err)
 	}
 
 	return productTypes.ProductTypes, nil
@@ -132,23 +143,33 @@ func (its *ITScopeCommunicator) GetProductsFromQuery(ctx context.Context, query 
 	urlString := "https://api.itscope.com/2.0/products/search/" + url.QueryEscape(query) + "/standard.json?realtime=false&plzproducts=false&page=1&item=0&sort=DEFAULT"
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, urlString, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("GetProductsFromQuery: %w", err)
 	}
 	err = its.authenticateRequest(request)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("GetProductsFromQuery: %w", err)
 	}
 
-	response, err := its.client.Do(request)
+	retries := 3
+	var response *http.Response
+	for retries > 0 {
+		response, err = its.client.Do(request)
+		if err != nil {
+			logrus.Errorln("Error during GetProductsFromQuery, retrying...")
+			retries -= 1
+		} else {
+			break
+		}
+	}
 	if err != nil {
-		return nil, fmt.Errorf("product query: %w", err)
+		return nil, fmt.Errorf("GetProductsFromQuery: %w", err)
 	}
 	defer response.Body.Close()
 
 	if response.StatusCode == http.StatusNotFound {
 		return &ProductsContainer{}, nil
 	} else if response.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf(response.Status)
+		return nil, fmt.Errorf("GetProductsFromQuery: %s", response.Status)
 	}
 	var products ProductsContainer
 	err = json.NewDecoder(response.Body).Decode(&products)
@@ -253,12 +274,12 @@ func (its *ITScopeCommunicator) FilterProductsByTypeList(products []Product, typ
 func (its *ITScopeCommunicator) GetServiceTypeAccessoriesOfProduct(ctx context.Context, product *Product) ([]Product, error) {
 	productTypes, err := its.GetAllProductTypes(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("GetServiceTypeAccessoriesOfProduct: %w", err)
 	}
 
 	accessories, err := its.GetProductAccessories(ctx, product)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("GetServiceTypeAccessoriesOfProduct: %w", err)
 	}
 
 	serviceTypes := its.FilterProductTypesByGroupId("SSP", productTypes)
@@ -273,7 +294,7 @@ func (its *ITScopeCommunicator) GetProductAccessories(ctx context.Context, produ
 
 	accessories, err := its.GetProductAccessoriesFromList(ctx, accessoryIds)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("GetServiceTypeAccessoriesOfProduct: %w", err)
 	}
 
 	return accessories, nil
