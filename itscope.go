@@ -99,7 +99,7 @@ func (its *ITScopeCommunicator) GetAllProductTypes(ctx context.Context) ([]Produ
 	if response.StatusCode == http.StatusNotFound {
 		return []ProductType{}, nil
 	} else if response.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("GetAllProductTypes: %s", response.Status)
+		return nil, fmt.Errorf("GetAllProductTypes responseStatusCode: %s", response.Status)
 	}
 	var productTypes ProductTypesContainer
 	err = json.NewDecoder(response.Body).Decode(&productTypes)
@@ -172,7 +172,7 @@ func (its *ITScopeCommunicator) GetProductsFromQuery(ctx context.Context, query 
 	if response.StatusCode == http.StatusNotFound {
 		return &ProductsContainer{}, nil
 	} else if response.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("GetProductsFromQuery: %s", response.Status)
+		return nil, fmt.Errorf("GetProductsFromQuery responseStatusCode: %s", response.Status)
 	}
 	var products ProductsContainer
 	err = json.NewDecoder(response.Body).Decode(&products)
