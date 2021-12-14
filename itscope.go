@@ -145,11 +145,11 @@ func (its *ITScopeCommunicator) GetProductsFromQuery(ctx context.Context, query 
 	urlString := "https://api.itscope.com/2.0/products/search/" + url.QueryEscape(query) + "/standard.json?realtime=false&plzproducts=false&page=1&item=0&sort=DEFAULT"
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, urlString, nil)
 	if err != nil {
-		return nil, fmt.Errorf("GetProductsFromQuery: %w", err)
+		return nil, fmt.Errorf("GetProductsFromQuery1: %w", err)
 	}
 	err = its.authenticateRequest(request)
 	if err != nil {
-		return nil, fmt.Errorf("GetProductsFromQuery: %w", err)
+		return nil, fmt.Errorf("GetProductsFromQuery2: %w", err)
 	}
 
 	retries := 3
@@ -158,8 +158,8 @@ func (its *ITScopeCommunicator) GetProductsFromQuery(ctx context.Context, query 
 		response, err = its.client.Do(request)
 		if err != nil {
 			logrus.Errorln("Error during GetProductsFromQuery, retrying...")
-			time.Sleep(2 * time.Second)
 			retries -= 1
+			time.Sleep(2 * time.Second)
 		} else {
 			break
 		}
