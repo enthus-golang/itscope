@@ -85,7 +85,7 @@ func (its *ITScopeCommunicator) GetAllProductTypes(ctx context.Context) ([]Produ
 		response, err = its.client.Do(request)
 		if err != nil || (response.StatusCode != http.StatusOK && response.StatusCode != http.StatusNotFound) {
 			logrus.Errorln("Error during GetAllProductTypes, retrying...")
-			time.Sleep(2 * time.Second)
+			time.Sleep(4 * time.Second)
 			retries -= 1
 		} else {
 			break
@@ -121,7 +121,7 @@ func (its *ITScopeCommunicator) GetProductAccessoriesFromList(ctx context.Contex
 
 	// Allow a maximum of 4 requests per second so ITscope doesn't block us.
 	var limit = rate.Limit(4)
-	var limiter = rate.NewLimiter(limit, 2)
+	var limiter = rate.NewLimiter(limit, 1)
 
 	for _, query := range queryStrings {
 		query := query
@@ -159,7 +159,7 @@ func (its *ITScopeCommunicator) GetProductsFromQuery(ctx context.Context, query 
 		if err != nil || (response.StatusCode != http.StatusOK && response.StatusCode != http.StatusNotFound) {
 			logrus.Errorln("Error during GetProductsFromQuery, retrying...")
 			retries -= 1
-			time.Sleep(2 * time.Second)
+			time.Sleep(4 * time.Second)
 		} else {
 			break
 		}
