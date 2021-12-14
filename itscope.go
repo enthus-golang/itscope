@@ -83,7 +83,7 @@ func (its *ITScopeCommunicator) GetAllProductTypes(ctx context.Context) ([]Produ
 	var response *http.Response
 	for retries > 0 {
 		response, err = its.client.Do(request)
-		if err != nil || response.StatusCode != http.StatusOK {
+		if err != nil || (response.StatusCode != http.StatusOK && response.StatusCode != http.StatusNotFound) {
 			logrus.Errorln("Error during GetAllProductTypes, retrying...")
 			time.Sleep(2 * time.Second)
 			retries -= 1
@@ -156,7 +156,7 @@ func (its *ITScopeCommunicator) GetProductsFromQuery(ctx context.Context, query 
 	var response *http.Response
 	for retries > 0 {
 		response, err = its.client.Do(request)
-		if err != nil || response.StatusCode != http.StatusOK {
+		if err != nil || (response.StatusCode != http.StatusOK && response.StatusCode != http.StatusNotFound) {
 			logrus.Errorln("Error during GetProductsFromQuery, retrying...")
 			retries -= 1
 			time.Sleep(2 * time.Second)
@@ -297,7 +297,7 @@ func (its *ITScopeCommunicator) GetProductAccessories(ctx context.Context, produ
 
 	accessories, err := its.GetProductAccessoriesFromList(ctx, accessoryIds)
 	if err != nil {
-		return nil, fmt.Errorf("GetServiceTypeAccessoriesOfProduct: %w", err)
+		return nil, fmt.Errorf("GetProductAccessories: %w", err)
 	}
 
 	return accessories, nil
