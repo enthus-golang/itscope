@@ -119,8 +119,8 @@ func (its *ITScopeCommunicator) GetProductAccessoriesFromList(ctx context.Contex
 
 	queryStrings := its.createQueryStrings(products, 50)
 
-	// Allow a maximum of 4 requests per second so ITscope doesn't block us.
-	var limit = rate.Limit(4)
+	// Allow a maximum of 3 requests per second so ITscope doesn't block us.
+	var limit = rate.Limit(3)
 	var limiter = rate.NewLimiter(limit, 1)
 
 	for _, query := range queryStrings {
