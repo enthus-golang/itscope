@@ -20,6 +20,7 @@ type ITScopeCommunicator struct {
 	language    Language
 	client      *http.Client
 	CompanyName string
+	limiter     *rate.Limiter
 }
 
 func New(companyName string, userName string, password string, language Language) *ITScopeCommunicator {
@@ -30,6 +31,7 @@ func New(companyName string, userName string, password string, language Language
 	its.password = password
 	its.language = language
 	its.client = &http.Client{}
+	its.limiter = rate.NewLimiter(rate.Limit(6), 6)
 
 	return its
 }
@@ -82,6 +84,10 @@ func (its *ITScopeCommunicator) GetAllProductTypes(ctx context.Context) ([]Produ
 	retries := 3
 	var response *http.Response
 	for retries > 0 {
+		if err = its.limiter.Wait(ctx); err != nil {
+			return nil, fmt.Errorf("limiter timeout: %w", err)
+		}
+
 		response, err = its.client.Do(request)
 		if err != nil || (response.StatusCode != http.StatusOK && response.StatusCode != http.StatusNotFound) {
 			logrus.Errorln("Error during GetAllProductTypes, retrying...")
@@ -119,16 +125,9 @@ func (its *ITScopeCommunicator) GetProductAccessoriesFromList(ctx context.Contex
 
 	queryStrings := its.createQueryStrings(products, 50)
 
-	// Allow a maximum of 3 requests per second so ITscope doesn't block us.
-	var limit = rate.Limit(3)
-	var limiter = rate.NewLimiter(limit, 1)
-
 	for _, query := range queryStrings {
 		query := query
 
-		if err := limiter.Wait(ctx); err != nil {
-			return nil, fmt.Errorf("limiter timeout")
-		}
 		product, err := its.GetProductsFromQuery(ctx, query)
 		if err != nil {
 			return nil, err
@@ -155,6 +154,10 @@ func (its *ITScopeCommunicator) GetProductsFromQuery(ctx context.Context, query 
 	retries := 3
 	var response *http.Response
 	for retries > 0 {
+		if err = its.limiter.Wait(ctx); err != nil {
+			return nil, fmt.Errorf("limiter timeout: %w", err)
+		}
+
 		response, err = its.client.Do(request)
 		if err != nil || (response.StatusCode != http.StatusOK && response.StatusCode != http.StatusNotFound) {
 			logrus.Errorln("Error during GetProductsFromQuery, retrying...")
