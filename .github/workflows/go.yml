@@ -32,7 +32,7 @@ jobs:
             ${{ runner.os }}-golang-
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v8
 
   test:
     runs-on: ubuntu-latest
