@@ -100,7 +100,11 @@ func (its *ITScopeCommunicator) GetAllProductTypes(ctx context.Context) ([]Produ
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve product types: %w", err)
 	}
-	defer response.Body.Close()
+	defer func() {
+		if cerr := response.Body.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("failed to close response body: %w", cerr)
+		}
+	}()
 
 	if response.StatusCode == http.StatusNotFound {
 		return []ProductType{}, nil
@@ -170,7 +174,11 @@ func (its *ITScopeCommunicator) GetProductsFromQuery(ctx context.Context, query 
 	if err != nil {
 		return nil, fmt.Errorf("GetProductsFromQuery: %w", err)
 	}
-	defer response.Body.Close()
+	defer func() {
+		if cerr := response.Body.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("failed to close response body: %w", cerr)
+		}
+	}()
 
 	if response.StatusCode == http.StatusNotFound {
 		return &ProductsContainer{}, nil
