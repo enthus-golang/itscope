@@ -13,6 +13,11 @@ import (
 	"golang.org/x/time/rate"
 )
 
+const (
+	maxRequestRetries = 3
+	retryBackoff      = 4 * time.Second
+)
+
 type ITScopeCommunicator struct {
 	username    string
 	password    string
@@ -53,6 +58,53 @@ func (its *ITScopeCommunicator) authenticateRequest(request *http.Request) error
 	return nil
 }
 
+// retryableStatus reports whether a failed request is worth retrying:
+// transient statuses only (429 and 5xx), never permanent 4xx.
+func retryableStatus(statusCode int) bool {
+	return statusCode == http.StatusTooManyRequests || statusCode >= http.StatusInternalServerError
+}
+
+// doWithRetry sends request through the rate limiter, retrying network errors
+// and transient statuses. The caller owns closing the returned response body.
+func (its *ITScopeCommunicator) doWithRetry(ctx context.Context, request *http.Request, operation string) (*http.Response, error) {
+	var response *http.Response
+	var err error
+
+	for attempt := 0; attempt < maxRequestRetries; attempt++ {
+		if err = its.limiter.Wait(ctx); err != nil {
+			return nil, fmt.Errorf("limiter timeout: %w", err)
+		}
+
+		response, err = its.client.Do(request)
+		if err == nil && !retryableStatus(response.StatusCode) {
+			return response, nil
+		}
+
+		// Keep the final attempt's response for the caller; close earlier ones.
+		if attempt < maxRequestRetries-1 {
+			if err != nil {
+				logrus.Errorf("Error during %s: %v, retrying...", operation, err)
+			} else {
+				logrus.Errorf("Error during %s: status %d, retrying...", operation, response.StatusCode)
+				_ = response.Body.Close()
+				response = nil
+			}
+
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(retryBackoff):
+			}
+		}
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", operation, err)
+	}
+
+	return response, nil
+}
+
 func (its *ITScopeCommunicator) GetProductData(ctx context.Context, productSKU string) (*Product, error) {
 	productContainer, err := its.GetProductsFromQuery(ctx, "distpid="+productSKU)
 	if err != nil {
@@ -70,7 +122,7 @@ func (its *ITScopeCommunicator) GetAllProductTypes(ctx context.Context) ([]Produ
 	u := url.URL{
 		Host:   "api.itscope.com",
 		Scheme: "https",
-		Path:   "2.0/products/producttypes/producttype.json",
+		Path:   "2.1/products/producttypes/producttype.json",
 	}
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
@@ -81,22 +133,7 @@ func (its *ITScopeCommunicator) GetAllProductTypes(ctx context.Context) ([]Produ
 		return nil, fmt.Errorf("could not retrieve product types: %w", err)
 	}
 
-	retries := 3
-	var response *http.Response
-	for retries > 0 {
-		if err = its.limiter.Wait(ctx); err != nil {
-			return nil, fmt.Errorf("limiter timeout: %w", err)
-		}
-
-		response, err = its.client.Do(request)
-		if err != nil || (response.StatusCode != http.StatusOK && response.StatusCode != http.StatusNotFound) {
-			logrus.Errorln("Error during GetAllProductTypes, retrying...")
-			time.Sleep(4 * time.Second)
-			retries -= 1
-		} else {
-			break
-		}
-	}
+	response, err := its.doWithRetry(ctx, request, "GetAllProductTypes")
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve product types: %w", err)
 	}
@@ -106,7 +143,7 @@ func (its *ITScopeCommunicator) GetAllProductTypes(ctx context.Context) ([]Produ
 		}
 	}()
 
-	if response.StatusCode == http.StatusNotFound {
+	if response.StatusCode == http.StatusNotFound || response.StatusCode == http.StatusNoContent {
 		return []ProductType{}, nil
 	} else if response.StatusCode != http.StatusOK {
 		return nil, NewUnexpectedStatusCodeError(response)
@@ -145,7 +182,7 @@ func (its *ITScopeCommunicator) GetProductAccessoriesFromList(ctx context.Contex
 }
 
 func (its *ITScopeCommunicator) GetProductsFromQuery(ctx context.Context, query string) (*ProductsContainer, error) {
-	urlString := "https://api.itscope.com/2.0/products/search/" + url.QueryEscape(query) + "/standard.json?realtime=false&plzproducts=false&page=1&item=0&sort=DEFAULT"
+	urlString := "https://api.itscope.com/2.1/products/search/" + url.QueryEscape(query) + "/standard.json?realtime=false&plzproducts=false&page=1&item=0&sort=DEFAULT"
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, urlString, nil)
 	if err != nil {
 		return nil, fmt.Errorf("GetProductsFromQuery1: %w", err)
@@ -155,22 +192,7 @@ func (its *ITScopeCommunicator) GetProductsFromQuery(ctx context.Context, query 
 		return nil, fmt.Errorf("GetProductsFromQuery2: %w", err)
 	}
 
-	retries := 3
-	var response *http.Response
-	for retries > 0 {
-		if err = its.limiter.Wait(ctx); err != nil {
-			return nil, fmt.Errorf("limiter timeout: %w", err)
-		}
-
-		response, err = its.client.Do(request)
-		if err != nil || (response.StatusCode != http.StatusOK && response.StatusCode != http.StatusNotFound) {
-			logrus.Errorln("Error during GetProductsFromQuery, retrying...")
-			retries -= 1
-			time.Sleep(4 * time.Second)
-		} else {
-			break
-		}
-	}
+	response, err := its.doWithRetry(ctx, request, "GetProductsFromQuery")
 	if err != nil {
 		return nil, fmt.Errorf("GetProductsFromQuery: %w", err)
 	}
@@ -180,7 +202,7 @@ func (its *ITScopeCommunicator) GetProductsFromQuery(ctx context.Context, query 
 		}
 	}()
 
-	if response.StatusCode == http.StatusNotFound {
+	if response.StatusCode == http.StatusNotFound || response.StatusCode == http.StatusNoContent {
 		return &ProductsContainer{}, nil
 	} else if response.StatusCode != http.StatusOK {
 		return nil, NewUnexpectedStatusCodeError(response)
@@ -220,8 +242,8 @@ func (its *ITScopeCommunicator) createQueryStrings(productIDs []string, length i
 
 func (its *ITScopeCommunicator) GetProductImages(product *Product) []string {
 	var imageUrls = make([]string, 0)
-	if product.Image1 != "" {
-		imageUrls = append(imageUrls, product.Image1)
+	if product.ImageHighRes1 != "" {
+		imageUrls = append(imageUrls, product.ImageHighRes1)
 	}
 	if product.Image2 != "" {
 		imageUrls = append(imageUrls, product.Image2)
