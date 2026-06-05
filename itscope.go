@@ -58,18 +58,14 @@ func (its *ITScopeCommunicator) authenticateRequest(request *http.Request) error
 	return nil
 }
 
-// retryableStatus reports whether an HTTP status warrants a retry. Only
-// transient failures (429 Too Many Requests and 5xx) are retried; permanent
-// client statuses (other 4xx) and successes are surfaced to the caller as-is,
-// so a single bad item never burns the full backoff budget.
+// retryableStatus reports whether a failed request is worth retrying:
+// transient statuses only (429 and 5xx), never permanent 4xx.
 func retryableStatus(statusCode int) bool {
 	return statusCode == http.StatusTooManyRequests || statusCode >= http.StatusInternalServerError
 }
 
-// doWithRetry sends request, honouring the rate limiter between attempts and
-// retrying only on network errors or transient statuses (see retryableStatus),
-// up to maxRequestRetries times. The returned response is either a successful
-// or permanent-status response; the caller owns closing its body.
+// doWithRetry sends request through the rate limiter, retrying network errors
+// and transient statuses. The caller owns closing the returned response body.
 func (its *ITScopeCommunicator) doWithRetry(ctx context.Context, request *http.Request, operation string) (*http.Response, error) {
 	var response *http.Response
 	var err error
@@ -84,8 +80,7 @@ func (its *ITScopeCommunicator) doWithRetry(ctx context.Context, request *http.R
 			return response, nil
 		}
 
-		// On the final attempt keep the response so the caller can surface its
-		// status; otherwise close it before backing off to avoid leaking it.
+		// Keep the final attempt's response for the caller; close earlier ones.
 		if attempt < maxRequestRetries-1 {
 			if response != nil {
 				_ = response.Body.Close()
