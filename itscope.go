@@ -82,13 +82,19 @@ func (its *ITScopeCommunicator) doWithRetry(ctx context.Context, request *http.R
 
 		// Keep the final attempt's response for the caller; close earlier ones.
 		if attempt < maxRequestRetries-1 {
-			if response != nil {
+			if err != nil {
+				logrus.Errorf("Error during %s: %v, retrying...", operation, err)
+			} else {
+				logrus.Errorf("Error during %s: status %d, retrying...", operation, response.StatusCode)
 				_ = response.Body.Close()
 				response = nil
 			}
 
-			logrus.Errorf("Error during %s, retrying...", operation)
-			time.Sleep(retryBackoff)
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(retryBackoff):
+			}
 		}
 	}
 
