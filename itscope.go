@@ -242,8 +242,8 @@ func (its *ITScopeCommunicator) createQueryStrings(productIDs []string, length i
 
 func (its *ITScopeCommunicator) GetProductImages(product *Product) []string {
 	var imageUrls = make([]string, 0)
-	if product.Image1 != "" {
-		imageUrls = append(imageUrls, product.Image1)
+	if product.ImageHighRes1 != "" {
+		imageUrls = append(imageUrls, product.ImageHighRes1)
 	}
 	if product.Image2 != "" {
 		imageUrls = append(imageUrls, product.Image2)

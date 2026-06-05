@@ -109,7 +109,7 @@ type Product struct {
 	ImageThumb                  string             `json:"imageThumb"`
 	ImageThumbWidth             string             `json:"imageThumbWidth"`
 	ImageThumbHeight            string             `json:"imageThumbHeight"`
-	Image1                      string             `json:"imageHighRes1"`
+	ImageHighRes1               string             `json:"imageHighRes1"`
 	ImageWidth1                 string             `json:"imageWidth1"`
 	ImageHeight1                string             `json:"imageHeight1"`
 	Image2                      string             `json:"image2"`
