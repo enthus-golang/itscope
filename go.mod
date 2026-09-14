@@ -1,10 +1,10 @@
 module github.com/enthus-golang/itscope
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/sirupsen/logrus v1.10.2
-	golang.org/x/time v0.15.0
+	golang.org/x/time v0.16.0
 )
 
 require golang.org/x/sys v0.13.0 // indirect
